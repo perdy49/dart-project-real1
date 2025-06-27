@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "821033357635",
+    "project_id": "coba1-914b4",
+    "storage_bucket": "coba1-914b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:821033357635:android:ed292205b887c7b9121ff6",
+        "android_client_info": {
+          "package_name": "com.example.coba_firebase1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBepU7lXw1dV0AipEBYtNoV18HDisesJwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
