@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'regist.dart';
 import 'home.dart'; // ini karena home.dart ada di folder yang sama dengan login.dart (yaitu di screens)
 
@@ -20,32 +21,34 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!isValid) return;
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
-      );
+      // Login ke Firebase
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: email.trim(),
+            password: password.trim(),
+          );
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Login berhasil!')));
+      // Ambil UID
+      String uid = userCredential.user!.uid;
 
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
-      );
+      // Ambil data user dari Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
 
-      // Jika berhasil, arahkan ke halaman Home
+      // Ambil field username
+      String username = userDoc['username'];
+
+      // Pindah ke Home dan kirim username
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => HomePage(username: username)),
       );
 
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Login berhasil!')));
-
-
-      // TODO: Arahkan ke halaman Home setelah login berhasil
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'user-not-found') {
@@ -61,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: Opacity(
+                          opacity: 0.5, // atur transparansi ikon di sini
+                          child: Icon(Icons.email),
+                        ),
+
                       ),
                       onChanged: (val) => email = val,
                       validator: (val) => val == null || !val.contains('@')
@@ -108,7 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock),
+                        prefixIcon: Opacity(
+                          opacity: 0.5,
+                          child: Icon(Icons.lock),
+                        ),
                       ),
                       obscureText: true,
                       onChanged: (val) => password = val,

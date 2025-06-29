@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -14,39 +15,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
   Future<void> _register() async {
-    final isValid = _formKey.currentState!.validate();
-    if (!isValid) return;
+  final isValid = _formKey.currentState!.validate();
+  if (!isValid) return;
 
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password.trim(),
-      );
+  try {
+    // Buat akun di Firebase Auth
+    final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password.trim(),
+    );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
-      );
+    // Simpan data user ke Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userCredential.user!.uid) // gunakan UID sebagai ID dokumen
+        .set({
+      'username': username.trim(),
+      'email': email.trim(),
+      'createdAt': Timestamp.now(),
+    });
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    } on FirebaseAuthException catch (e) {
-      print('Error saat registrasi: ${e.code} - ${e.message}');
-      String message = '';
-      if (e.code == 'email-already-in-use') {
-        message = 'Email sudah digunakan.';
-      } else if (e.code == 'weak-password') {
-        message = 'Password terlalu lemah.';
-      } else {
-        message = 'Gagal daftar: ${e.message}';
-      }
+    // Sukses
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
+    );
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  } on FirebaseAuthException catch (e) {
+    print('Error saat registrasi: ${e.code} - ${e.message}');
+    String message = '';
+    if (e.code == 'email-already-in-use') {
+      message = 'Email sudah digunakan.';
+    } else if (e.code == 'weak-password') {
+      message = 'Password terlalu lemah.';
+    } else {
+      message = 'Gagal daftar: ${e.message}';
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +94,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Username',
-                        prefixIcon: Icon(Icons.person),
+                        prefixIcon: Opacity(
+                          opacity: 0.5, // atur transparansi ikon di sini
+                          child: Icon(Icons.person),
+                        ),
                       ),
                       onChanged: (val) => username = val,
                       validator: (val) => val == null || val.isEmpty
@@ -94,7 +108,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: Opacity(
+                          opacity: 0.5, // atur transparansi ikon di sini
+                          child: Icon(Icons.email),
+                        ),
                       ),
                       onChanged: (val) => email = val,
                       validator: (val) => val == null || !val.contains('@')
@@ -105,7 +122,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock),
+                        prefixIcon: Opacity(
+                          opacity: 0.5,
+                          child: Icon(Icons.lock),
+                        ),
                       ),
                       obscureText: true,
                       onChanged: (val) => password = val,
