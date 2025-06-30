@@ -33,6 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'username': username.trim(),
       'email': email.trim(),
       'createdAt': Timestamp.now(),
+      'role': 'user', // <- tambahkan ini
     });
 
     // Sukses

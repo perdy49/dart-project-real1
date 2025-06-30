@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'regist.dart';
 import 'home.dart'; // ini karena home.dart ada di folder yang sama dengan login.dart (yaitu di screens)
-
+import 'admin.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String email = '', password = '';
   final _formKey = GlobalKey<FormState>();
 
-  Future<void> _login() async {
+Future<void> _login() async {
     final isValid = _formKey.currentState!.validate();
     if (!isValid) return;
 
@@ -28,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
             password: password.trim(),
           );
 
-      // Ambil UID
       String uid = userCredential.user!.uid;
 
       // Ambil data user dari Firestore
@@ -37,14 +36,22 @@ class _LoginScreenState extends State<LoginScreen> {
           .doc(uid)
           .get();
 
-      // Ambil field username
       String username = userDoc['username'];
+      String role = userDoc['role'];
 
-      // Pindah ke Home dan kirim username
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage(username: username)),
-      );
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AdminPage(username: username),
+          ), // buat halaman ini nanti
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage(username: username)),
+        );
+      }
 
       ScaffoldMessenger.of(
         context,
