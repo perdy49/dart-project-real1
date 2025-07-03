@@ -31,10 +31,19 @@ Future<void> _login() async {
       String uid = userCredential.user!.uid;
 
       // Ambil data user dari Firestore
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .get();
+
+      // Cek apakah dokumen Firestore user masih ada
+      if (!userDoc.exists) {
+        await FirebaseAuth.instance.signOut();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Akun ini telah dihapus dari sistem.')),
+        );
+        return;
+      }
 
       String username = userDoc['username'];
       String role = userDoc['role'];

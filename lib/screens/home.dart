@@ -4,11 +4,41 @@ import 'login.dart';
 
 class HomePage extends StatelessWidget {
   final String username;
+  final bool isAdmin;
 
-  const HomePage({super.key, required this.username});
+  const HomePage({super.key, required this.username, this.isAdmin = false});
 
   @override
   Widget build(BuildContext context) {
+    // Fungsi logout dengan konfirmasi dialog
+    Future<void> _logoutWithConfirmation() async {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Konfirmasi Logout'),
+          content: const Text('Yakin ingin logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Tidak'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Ya'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await FirebaseAuth.instance.signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
@@ -38,13 +68,7 @@ class HomePage extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.black),
                   tooltip: 'Logout',
-                  onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    );
-                  },
+                  onPressed: _logoutWithConfirmation, // Ganti ini
                 ),
               ],
             ),
