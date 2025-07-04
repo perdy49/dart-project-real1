@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 import 'home.dart'; // pastikan home.dart diimport
 import 'kelola_user_page.dart';
+import 'kelola_barang_page.dart';
 // import halaman kelola lainnya jika sudah ada
 
 class AdminPage extends StatefulWidget {
@@ -49,18 +50,16 @@ class _AdminPageState extends State<AdminPage> {
   // Daftar halaman/tab yang bisa dipilih di navbar
   List<Widget> get _pages => [
     Center(child: Text('Selamat datang Admin ${widget.username}')),
-    Center(
-      child: Text('Halaman Kelola Barang (CRUD)'),
-    ), // nanti ganti dengan page asli
+    const KelolaBarangPage(), // ← Ganti ini
     const KelolaUserPage(),
-    HomePage(username: widget.username, isAdmin: true), // tampilkan home user
+    HomePage(username: widget.username, isAdmin: true),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Panel - ${widget.username}'),
+        title: Text('Admin - ${widget.username}'),
         backgroundColor: Colors.teal,
         actions: [
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),

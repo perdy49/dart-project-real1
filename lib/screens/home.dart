@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 
@@ -75,7 +76,43 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-      body: const Center(child: Text('Isi konten di sini')),
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('barang')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return const Center(child: Text("Belum ada barang tersedia"));
+          }
+
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+
+              return Card(
+                margin: const EdgeInsets.all(10),
+                child: ListTile(
+                  leading: Image.network(
+                    data['imageUrl'],
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                  title: Text(data['deskripsi']),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

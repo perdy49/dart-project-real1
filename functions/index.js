@@ -1,33 +1,31 @@
-const functions = require("firebase-functions");
+const express = require("express");
 const admin = require("firebase-admin");
-admin.initializeApp();
+const app = express();
+const cors = require("cors");
 
-const {setGlobalOptions} = require("firebase-functions");
-setGlobalOptions({maxInstances: 10});
+app.use(cors());
+app.use(express.json());
 
-// Tambahkan fungsi deleteUser
-exports.deleteUser = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User belum login.",
-    );
-  }
+admin.initializeApp({
+  credential: admin.credential.cert(require("./serviceAccountKey.json")),
+});
 
-  const uid = data.uid;
+app.post("/delete-user", async (req, res) => {
+  const {uid} = req.body;
 
   try {
-    // Hapus user dari Firebase Authentication
     await admin.auth().deleteUser(uid);
-
-    // (Opsional) Hapus juga data Firestore user
     await admin.firestore().collection("users").doc(uid).delete();
 
-    return {
+    res.status(200).json({
       success: true,
       message: `User dengan UID ${uid} berhasil dihapus.`,
-    };
+    });
   } catch (error) {
-    throw new functions.https.HttpsError("unknown", error.message);
+    res.status(500).json({success: false, error: error.message});
   }
+});
+
+app.listen(3000, () => {
+  console.log("Server jalan di port 3000");
 });
