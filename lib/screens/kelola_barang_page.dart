@@ -1,12 +1,12 @@
 // kelola_barang_page.dart
-import 'dart:io' as io; // Rename to avoid conflict with web
+import 'dart:io' as io;
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:html' as html; // Web only
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class KelolaBarangPage extends StatefulWidget {
   const KelolaBarangPage({super.key});
@@ -20,9 +20,12 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     'barang',
   );
 
+  final String bucketName = 'barang';
+
   Future<void> _tambahBarang() async {
     final deskripsiController = TextEditingController();
     String? imageUrl;
+    final supabase = Supabase.instance.client;
 
     if (kIsWeb) {
       final input = html.FileUploadInputElement()..accept = 'image/*';
@@ -36,16 +39,21 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
 
         Uint8List fileBytes = reader.result as Uint8List;
         final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-        final storageRef = FirebaseStorage.instance.ref().child(
-          'images/$fileName.jpg',
-        );
+        final filePath = 'images/$fileName.jpg';
 
-        await storageRef.putData(
-          fileBytes,
-          SettableMetadata(contentType: file.type),
-        );
-        imageUrl = await storageRef.getDownloadURL();
+        try {
+          await supabase.storage
+              .from(bucketName)
+              .uploadBinary(filePath, fileBytes);
+        } catch (e) {
+          debugPrint('Upload error: $e');
+          return;
+        }
 
+        final publicURL = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(filePath);
+        imageUrl = publicURL;
         _showDeskripsiDialog(imageUrl!, deskripsiController);
       });
     } else {
@@ -55,14 +63,23 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
       if (pickedFile == null) return;
 
       final file = io.File(pickedFile.path);
+      final fileBytes = await file.readAsBytes(); // Konversi jadi Uint8List
       final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      final storageRef = FirebaseStorage.instance.ref().child(
-        'images/$fileName.jpg',
-      );
+      final filePath = 'images/$fileName.jpg';
 
-      final uploadTask = await storageRef.putFile(file);
-      imageUrl = await uploadTask.ref.getDownloadURL();
+      try {
+        await supabase.storage
+            .from(bucketName)
+            .uploadBinary(filePath, fileBytes);
+      } catch (e) {
+        debugPrint('Upload error: $e');
+        return;
+      }
 
+      final publicURL = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+      imageUrl = publicURL;
       _showDeskripsiDialog(imageUrl, deskripsiController);
     }
   }
@@ -98,8 +115,18 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
   }
 
   Future<void> _hapusBarang(String docId, String imageUrl) async {
-    final ref = FirebaseStorage.instance.refFromURL(imageUrl);
-    await ref.delete();
+    try {
+      final uri = Uri.parse(imageUrl);
+      final segments = uri.pathSegments;
+      final filePath = segments.sublist(segments.indexOf('images')).join('/');
+
+      await Supabase.instance.client.storage.from(bucketName).remove([
+        filePath,
+      ]);
+    } catch (e) {
+      debugPrint('Gagal hapus dari Supabase: $e');
+    }
+
     await _barangRef.doc(docId).delete();
   }
 
@@ -139,8 +166,10 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
       body: StreamBuilder(
         stream: _barangRef.orderBy('createdAt', descending: true).snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
+
           final docs = snapshot.data!.docs;
 
           return ListView.builder(

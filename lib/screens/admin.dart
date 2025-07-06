@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
-import 'home.dart'; // pastikan home.dart diimport
+import 'home.dart';
 import 'kelola_user_page.dart';
 import 'kelola_barang_page.dart';
-// import halaman kelola lainnya jika sudah ada
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminPage extends StatefulWidget {
   final String username;
@@ -17,6 +17,21 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSupabaseUser();
+  }
+
+  void _checkSupabaseUser() async {
+    final supabaseUser = Supabase.instance.client.auth.currentUser;
+    if (supabaseUser == null) {
+      print('User Supabase: anon (belum login)');
+    } else {
+      print('User Supabase: ${supabaseUser.email}');
+    }
+  }
 
   void _logout() async {
     final confirm = await showDialog<bool>(
@@ -37,7 +52,6 @@ class _AdminPageState extends State<AdminPage> {
       ),
     );
 
-    // Jika pengguna pilih "Ya", lakukan logout
     if (confirm == true) {
       await FirebaseAuth.instance.signOut();
       Navigator.pushReplacement(
@@ -47,10 +61,9 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
-  // Daftar halaman/tab yang bisa dipilih di navbar
   List<Widget> get _pages => [
     Center(child: Text('Selamat datang Admin ${widget.username}')),
-    const KelolaBarangPage(), // ← Ganti ini
+    const KelolaBarangPage(),
     const KelolaUserPage(),
     HomePage(username: widget.username, isAdmin: true),
   ];
