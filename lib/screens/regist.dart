@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -11,54 +10,60 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  String username = '', email = '', password = '';
   final _formKey = GlobalKey<FormState>();
+  String username = '', email = '', password = '';
 
   Future<void> _register() async {
-  final isValid = _formKey.currentState!.validate();
-  if (!isValid) return;
+    final isValid = _formKey.currentState!.validate();
+    if (!isValid) return;
 
-  try {
-    // Buat akun di Firebase Auth
-    final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password.trim(),
-    );
+    try {
+      final supabase = Supabase.instance.client;
 
-    // Simpan data user ke Firestore
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userCredential.user!.uid) // gunakan UID sebagai ID dokumen
-        .set({
-      'username': username.trim(),
-      'email': email.trim(),
-      'createdAt': Timestamp.now(),
-      'role': 'user', // <- tambahkan ini
-    });
+      final response = await supabase.auth.signUp(
+        email: email.trim(),
+        password: password.trim(),
+      );
 
-    // Sukses
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
-    );
+      final user = response.user;
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  } on FirebaseAuthException catch (e) {
-    print('Error saat registrasi: ${e.code} - ${e.message}');
-    String message = '';
-    if (e.code == 'email-already-in-use') {
-      message = 'Email sudah digunakan.';
-    } else if (e.code == 'weak-password') {
-      message = 'Password terlalu lemah.';
-    } else {
-      message = 'Gagal daftar: ${e.message}';
+      if (user == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Registrasi gagal.')));
+        return;
+      }
+
+      final insertResponse = await supabase.from('users').insert({
+        'id': user.id,
+        'username': username.trim(),
+        'email': email.trim(),
+        'role': 'user',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+
+      if (insertResponse != null && insertResponse.error != null) {
+        throw insertResponse.error!;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } on AuthException catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal daftar: ${e.message}')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -96,12 +101,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Username',
                         prefixIcon: Opacity(
-                          opacity: 0.5, // atur transparansi ikon di sini
+                          opacity: 0.5,
                           child: Icon(Icons.person),
                         ),
                       ),
-                      onChanged: (val) => username = val,
-                      validator: (val) => val == null || val.isEmpty
+                      onChanged: (val) => username = val.trim(),
+                      validator: (val) => val == null || val.trim().isEmpty
                           ? 'Masukkan username'
                           : null,
                     ),
@@ -110,14 +115,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Opacity(
-                          opacity: 0.5, // atur transparansi ikon di sini
+                          opacity: 0.5,
                           child: Icon(Icons.email),
                         ),
                       ),
-                      onChanged: (val) => email = val,
-                      validator: (val) => val == null || !val.contains('@')
-                          ? 'Email tidak valid'
-                          : null,
+                      onChanged: (val) => email = val.trim(),
+                      validator: (val) {
+                        final emailTrimmed = val?.trim() ?? '';
+                        if (emailTrimmed.isEmpty ||
+                            !emailTrimmed.contains('@')) {
+                          return 'Email tidak valid';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -129,8 +139,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       obscureText: true,
-                      onChanged: (val) => password = val,
-                      validator: (val) => val == null || val.length < 6
+                      onChanged: (val) => password = val.trim(),
+                      validator: (val) => val == null || val.trim().length < 6
                           ? 'Minimal 6 karakter'
                           : null,
                     ),
@@ -150,9 +160,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pop(context); // Kembali ke login
+                        Navigator.pop(context);
                       },
-                      child: Text(
+                      child: const Text(
                         "Sudah punya akun? Login",
                         style: TextStyle(
                           color: Colors.teal,

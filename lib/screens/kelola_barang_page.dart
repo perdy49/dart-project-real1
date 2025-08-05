@@ -1,7 +1,6 @@
 // kelola_barang_page.dart
 import 'dart:io' as io;
 import 'dart:typed_data';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,10 +15,6 @@ class KelolaBarangPage extends StatefulWidget {
 }
 
 class _KelolaBarangPageState extends State<KelolaBarangPage> {
-  final CollectionReference _barangRef = FirebaseFirestore.instance.collection(
-    'barang',
-  );
-
   final String bucketName = 'barang';
 
   Future<void> _tambahBarang() async {
@@ -63,7 +58,7 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
       if (pickedFile == null) return;
 
       final file = io.File(pickedFile.path);
-      final fileBytes = await file.readAsBytes(); // Konversi jadi Uint8List
+      final fileBytes = await file.readAsBytes();
       final fileName = DateTime.now().millisecondsSinceEpoch.toString();
       final filePath = 'images/$fileName.jpg';
 
@@ -100,12 +95,13 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
           ),
           TextButton(
             onPressed: () async {
-              await _barangRef.add({
+              await Supabase.instance.client.from('barang').insert({
                 'imageUrl': imageUrl,
                 'deskripsi': controller.text,
-                'createdAt': Timestamp.now(),
+                'createdAt': DateTime.now().toIso8601String(),
               });
               Navigator.pop(context);
+              setState(() {});
             },
             child: const Text("Simpan"),
           ),
@@ -114,7 +110,7 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     );
   }
 
-  Future<void> _hapusBarang(String docId, String imageUrl) async {
+  Future<void> _hapusBarang(int id, String imageUrl) async {
     try {
       final uri = Uri.parse(imageUrl);
       final segments = uri.pathSegments;
@@ -127,10 +123,11 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
       debugPrint('Gagal hapus dari Supabase: $e');
     }
 
-    await _barangRef.doc(docId).delete();
+    await Supabase.instance.client.from('barang').delete().eq('id', id);
+    setState(() {});
   }
 
-  Future<void> _editDeskripsi(String docId, String currentDeskripsi) async {
+  Future<void> _editDeskripsi(int id, String currentDeskripsi) async {
     final controller = TextEditingController(text: currentDeskripsi);
 
     await showDialog(
@@ -148,10 +145,12 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
           ),
           TextButton(
             onPressed: () async {
-              await _barangRef.doc(docId).update({
-                'deskripsi': controller.text,
-              });
+              await Supabase.instance.client
+                  .from('barang')
+                  .update({'deskripsi': controller.text})
+                  .eq('id', id);
               Navigator.pop(context);
+              setState(() {});
             },
             child: const Text("Simpan"),
           ),
@@ -160,23 +159,32 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchBarang() async {
+    final response = await Supabase.instance.client
+        .from('barang')
+        .select()
+        .order('createdAt', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: StreamBuilder(
-        stream: _barangRef.orderBy('createdAt', descending: true).snapshots(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchBarang(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          final docs = snapshot.data!;
 
           return ListView.builder(
             itemCount: docs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id;
+              final data = docs[index];
+              final id = data['id'];
 
               return Card(
                 margin: const EdgeInsets.all(10),
@@ -187,13 +195,13 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
                     height: 50,
                     fit: BoxFit.cover,
                   ),
-                  title: Text(data['deskripsi']),
+                  title: Text(data['deskripsi'] ?? ''),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
-                        _editDeskripsi(docId, data['deskripsi']);
+                        _editDeskripsi(id, data['deskripsi']);
                       } else if (value == 'hapus') {
-                        _hapusBarang(docId, data['imageUrl']);
+                        _hapusBarang(id, data['imageUrl']);
                       }
                     },
                     itemBuilder: (_) => const [

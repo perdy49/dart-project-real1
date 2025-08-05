@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
 import 'home.dart';
 import 'kelola_user_page.dart';
 import 'kelola_barang_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminPage extends StatefulWidget {
-  final String username;
+  final String username; // Ini email user, bisa dijadikan username juga
 
   const AdminPage({super.key, required this.username});
 
@@ -53,7 +52,7 @@ class _AdminPageState extends State<AdminPage> {
     );
 
     if (confirm == true) {
-      await FirebaseAuth.instance.signOut();
+      await Supabase.instance.client.auth.signOut(); // ✅ Supabase logout
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -62,11 +61,11 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   List<Widget> get _pages => [
-    Center(child: Text('Selamat datang Admin ${widget.username}')),
-    const KelolaBarangPage(),
-    const KelolaUserPage(),
-    HomePage(username: widget.username, isAdmin: true),
-  ];
+        Center(child: Text('Selamat datang Admin ${widget.username}')),
+        const KelolaBarangPage(),
+        const KelolaUserPage(),
+        HomePage(username: widget.username, isAdmin: true),
+      ];
 
   @override
   Widget build(BuildContext context) {

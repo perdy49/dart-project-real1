@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'regist.dart';
-import 'home.dart'; // ini karena home.dart ada di folder yang sama dengan login.dart (yaitu di screens)
+import 'home.dart';
 import 'admin.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,44 +15,51 @@ class _LoginScreenState extends State<LoginScreen> {
   String email = '', password = '';
   final _formKey = GlobalKey<FormState>();
 
-Future<void> _login() async {
+  Future<void> _login() async {
     final isValid = _formKey.currentState!.validate();
     if (!isValid) return;
 
     try {
-      // Login ke Firebase
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: email.trim(),
-            password: password.trim(),
-          );
+      final supabase = Supabase.instance.client;
+      final response = await supabase.auth.signInWithPassword(
+        email: email.trim(),
+        password: password.trim(),
+      );
 
-      String uid = userCredential.user!.uid;
+      final user = response.user;
 
-      // Ambil data user dari Firestore
-DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-
-      // Cek apakah dokumen Firestore user masih ada
-      if (!userDoc.exists) {
-        await FirebaseAuth.instance.signOut();
+      if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Akun ini telah dihapus dari sistem.')),
+          const SnackBar(content: Text('Login gagal, user tidak ditemukan.')),
         );
         return;
       }
 
-      String username = userDoc['username'];
-      String role = userDoc['role'];
+      final userResponse = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (userResponse == null) {
+        await supabase.auth.signOut();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Akun ini tidak terdaftar di tabel users.'),
+          ),
+        );
+        return;
+      }
+
+      final username = userResponse['username'] as String? ?? 'User';
+      final role = userResponse['role'] as String? ?? 'user';
 
       if (role == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => AdminPage(username: username),
-          ), // buat halaman ini nanti
+          ),
         );
       } else {
         Navigator.pushReplacement(
@@ -65,22 +71,16 @@ DocumentSnapshot userDoc = await FirebaseFirestore.instance
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Login berhasil!')));
-    } on FirebaseAuthException catch (e) {
-      String message = '';
-      if (e.code == 'user-not-found') {
-        message = 'Akun tidak ditemukan';
-      } else if (e.code == 'wrong-password') {
-        message = 'Password salah';
-      } else {
-        message = 'Login gagal: ${e.message}';
-      }
-
+    } on AuthException catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ).showSnackBar(SnackBar(content: Text('Login gagal: ${e.message}')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -118,15 +118,19 @@ DocumentSnapshot userDoc = await FirebaseFirestore.instance
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Opacity(
-                          opacity: 0.5, // atur transparansi ikon di sini
+                          opacity: 0.5,
                           child: Icon(Icons.email),
                         ),
-
                       ),
-                      onChanged: (val) => email = val,
-                      validator: (val) => val == null || !val.contains('@')
-                          ? 'Masukkan email valid'
-                          : null,
+                      onChanged: (val) => email = val.trim(),
+                      validator: (val) {
+                        final emailTrimmed = val?.trim() ?? '';
+                        if (emailTrimmed.isEmpty ||
+                            !emailTrimmed.contains('@')) {
+                          return 'Masukkan email valid';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -138,8 +142,8 @@ DocumentSnapshot userDoc = await FirebaseFirestore.instance
                         ),
                       ),
                       obscureText: true,
-                      onChanged: (val) => password = val,
-                      validator: (val) => val == null || val.length < 6
+                      onChanged: (val) => password = val.trim(),
+                      validator: (val) => val == null || val.trim().length < 6
                           ? 'Minimal 6 karakter'
                           : null,
                     ),

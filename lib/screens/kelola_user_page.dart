@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class KelolaUserPage extends StatelessWidget {
   const KelolaUserPage({super.key});
 
-  void _konfirmasiHapus(BuildContext context, String docId, String username) {
+  void _konfirmasiHapus(BuildContext context, String userId, String username) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -18,12 +18,12 @@ class KelolaUserPage extends StatelessWidget {
             ),
             TextButton(
               child: const Text('Ya'),
-              onPressed: () {
-                FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(docId)
-                    .delete();
-                Navigator.of(context).pop(); // Tutup dialog
+              onPressed: () async {
+                await Supabase.instance.client
+                    .from('users')
+                    .delete()
+                    .eq('id', userId);
+                Navigator.of(context).pop();
               },
             ),
           ],
@@ -32,24 +32,27 @@ class KelolaUserPage extends StatelessWidget {
     );
   }
 
+  Future<List<Map<String, dynamic>>> _fetchUsers() async {
+    final response = await Supabase.instance.client
+        .from('users')
+        .select()
+        .neq('role', 'admin'); // filter user non-admin saja
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _fetchUsers(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Terjadi kesalahan'));
         }
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final allUsers = snapshot.data!.docs;
-
-        // Filter: sembunyikan user yang role-nya 'admin'
-        final users = allUsers
-            .where((user) => user['role'] != 'admin')
-            .toList();
+        final users = snapshot.data!;
 
         if (users.isEmpty) {
           return const Center(child: Text('Tidak ada user non-admin.'));
@@ -66,7 +69,7 @@ class KelolaUserPage extends StatelessWidget {
               trailing: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () {
-                  _konfirmasiHapus(context, user.id, user['username'] ?? '');
+                  _konfirmasiHapus(context, user['id'], user['username'] ?? '');
                 },
               ),
             );

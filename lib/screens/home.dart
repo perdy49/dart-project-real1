@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
 
 class HomePage extends StatelessWidget {
@@ -32,7 +31,7 @@ class HomePage extends StatelessWidget {
       );
 
       if (confirm == true) {
-        await FirebaseAuth.instance.signOut();
+        await Supabase.instance.client.auth.signOut();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -69,24 +68,21 @@ class HomePage extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.black),
                   tooltip: 'Logout',
-                  onPressed: _logoutWithConfirmation, // Ganti ini
+                  onPressed: _logoutWithConfirmation,
                 ),
               ],
             ),
           ),
         ),
       ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('barang')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _getBarangData(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!.docs;
+          final docs = snapshot.data!;
 
           if (docs.isEmpty) {
             return const Center(child: Text("Belum ada barang tersedia"));
@@ -95,7 +91,7 @@ class HomePage extends StatelessWidget {
           return ListView.builder(
             itemCount: docs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
+              final data = docs[index];
 
               return Card(
                 margin: const EdgeInsets.all(10),
@@ -114,5 +110,14 @@ class HomePage extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Future<List<Map<String, dynamic>>> _getBarangData() async {
+    final response = await Supabase.instance.client
+        .from('barang')
+        .select()
+        .order('createdAt', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
   }
 }

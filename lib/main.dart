@@ -1,7 +1,7 @@
 import 'package:coba_firebase1/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // <- Tambahkan ini
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/login.dart';
 
 void main() async {
@@ -12,9 +12,9 @@ void main() async {
 
   // Inisialisasi Supabase
   await Supabase.initialize(
-    url: 'https://mlluqzmslhjxbrzviiky.supabase.co',
+    url: 'https://oppzfokkrmwlztmgoqwc.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sbHVxem1zbGhqeGJyenZpaWt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2NDE2NjIsImV4cCI6MjA2NzIxNzY2Mn0.WAZYm7WEhYCucdhroCbE3nM5L7LeqJc1kRdfbtkXA5U',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wcHpmb2trcm13bHp0bWdvcXdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMjg2NDQsImV4cCI6MjA2NzkwNDY0NH0.RzK6ePuC-cuYJ0UK_TNHCbw-jWo9pG-IymaGaBz21pc',
   );
 
   runApp(const MyApp());
