@@ -1,5 +1,5 @@
-import 'package:coba_firebase1/firebase_options.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:coba_firebase1/firebase_options.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/login.dart';
@@ -8,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inisialisasi Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Inisialisasi Supabase
   await Supabase.initialize(

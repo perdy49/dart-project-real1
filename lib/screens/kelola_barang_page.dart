@@ -15,7 +15,7 @@ class KelolaBarangPage extends StatefulWidget {
 }
 
 class _KelolaBarangPageState extends State<KelolaBarangPage> {
-  final String bucketName = 'barang';
+  final String bucketName = 'barang-images';
 
   Future<void> _tambahBarang() async {
     final deskripsiController = TextEditingController();
@@ -79,14 +79,31 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     }
   }
 
-  void _showDeskripsiDialog(String imageUrl, TextEditingController controller) {
+void _showDeskripsiDialog(
+    String imageUrl,
+    TextEditingController deskripsiController,
+  ) {
+    final namaController = TextEditingController(); // Tambahkan controller nama
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Deskripsi Barang"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: "Masukkan deskripsi"),
+        title: const Text("Tambah Barang"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: namaController,
+              decoration: const InputDecoration(
+                hintText: "Masukkan nama barang",
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: deskripsiController,
+              decoration: const InputDecoration(hintText: "Masukkan deskripsi"),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -96,10 +113,12 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
           TextButton(
             onPressed: () async {
               await Supabase.instance.client.from('barang').insert({
+                'nama': namaController.text, // <-- Tambahkan ini
+                'deskripsi': deskripsiController.text,
                 'imageUrl': imageUrl,
-                'deskripsi': controller.text,
                 'createdAt': DateTime.now().toIso8601String(),
               });
+
               Navigator.pop(context);
               setState(() {});
             },
@@ -110,7 +129,7 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     );
   }
 
-  Future<void> _hapusBarang(int id, String imageUrl) async {
+  Future<void> _hapusBarang(String id, String imageUrl) async {
     try {
       final uri = Uri.parse(imageUrl);
       final segments = uri.pathSegments;
@@ -127,7 +146,7 @@ class _KelolaBarangPageState extends State<KelolaBarangPage> {
     setState(() {});
   }
 
-  Future<void> _editDeskripsi(int id, String currentDeskripsi) async {
+  Future<void> _editDeskripsi(String id, String currentDeskripsi) async {
     final controller = TextEditingController(text: currentDeskripsi);
 
     await showDialog(

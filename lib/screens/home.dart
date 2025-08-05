@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
+import 'feedback_user.dart';
 
 class HomePage extends StatelessWidget {
   final String username;
@@ -78,35 +79,59 @@ class HomePage extends StatelessWidget {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _getBarangData(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data!;
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
+          final docs = snapshot.data!;
           if (docs.isEmpty) {
             return const Center(child: Text("Belum ada barang tersedia"));
           }
 
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data = docs[index];
-
-              return Card(
-                margin: const EdgeInsets.all(10),
-                child: ListTile(
-                  leading: Image.network(
-                    data['imageUrl'],
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                  ),
-                  title: Text(data['deskripsi']),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FeedbackFormPage(username: username),
+                      ),
+                    );
+                  },
+                  child: const Text('Kirim Keluhan'),
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index];
+
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        leading: Image.network(
+                          data['imageUrl'],
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        ),
+                        title: Text(data['deskripsi']),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
+
         },
       ),
     );

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'login.dart';
-import 'home.dart';
+// import 'home.dart'; udah ga kepake
 import 'kelola_user_page.dart';
 import 'kelola_barang_page.dart';
+import 'feedback_page.dart';
 
 class AdminPage extends StatefulWidget {
   final String username; // Ini email user, bisa dijadikan username juga
@@ -64,7 +65,7 @@ class _AdminPageState extends State<AdminPage> {
         Center(child: Text('Selamat datang Admin ${widget.username}')),
         const KelolaBarangPage(),
         const KelolaUserPage(),
-        HomePage(username: widget.username, isAdmin: true),
+        const FeedbackPage(), // ganti dari HomePage atau UserView
       ];
 
   @override
@@ -95,9 +96,10 @@ class _AdminPageState extends State<AdminPage> {
           BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Barang'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'User'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.remove_red_eye),
-            label: 'User View',
+            icon: Icon(Icons.feedback),
+            label: 'Feedback',
           ),
+
         ],
       ),
     );
